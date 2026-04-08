@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
 $uvicornHost = "192.168.137.50"
-$uvicornPort = 8000
+$uvicornPort = 3500
 
 if (-not (Test-Path ".\env\Scripts\Activate.ps1")) {
     Write-Host "ยังไม่มี venv — รันก่อน: python -m venv env && .\env\Scripts\activate && pip install -r requirements.txt"

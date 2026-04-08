@@ -392,8 +392,7 @@ def startup() -> None:
         except Exception as e:
             print(
                 "[api] WARNING เพิ่มคอลัมน์ debt (interest_rate_basis / payment_period) ไม่สำเร็จ — "
-                "GET /debts อาจ 500 จนกว่าจะรัน SQL ใน debt_add_interest_rate_basis.sql / debt_add_payment_period.sql "
-                "หรือให้ user DB สิทธิ์ ALTER:",
+                "GET /debts อาจ 500 จนกว่าจะรัน ALTER เดียวกับใน _ensure_debt_columns() หรือให้ user DB สิทธิ์ ALTER:",
                 e,
             )
 

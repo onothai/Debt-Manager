@@ -7,5 +7,5 @@ if not exist "env\Scripts\activate.bat" (
 )
 call env\Scripts\activate.bat
 echo venv OK — DB จากไฟล์ .env ถ้ามี
-uvicorn api:app --host 192.168.137.50 --port 8000 --reload
+uvicorn api:app --host 192.168.137.50 --port 3500 --reload
 pause

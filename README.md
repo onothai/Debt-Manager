@@ -1,66 +1,52 @@
 # Debt Manager API + Flet App
 
 ระบบนี้พัฒนาตาม datadic จากไฟล์ `ตาราง หนี้.pdf` และอิง schema ใน MariaDB ของงานนี้:
+
 - `user`
 - `debt`
-- `instalment`
+- `installment`
 
-## ไฟล์สำคัญ
-- `api.py` : FastAPI สำหรับ CRUD และคำนวณตารางผ่อน/วันจบหนี้
-- `flet_app.py` : entrypoint แอป Flet
-- `ui/` : โครงสร้างหน้าแอปแบบแยกไฟล์ (login / signup / dashboard / result)
-- `requirements.txt` : dependency สำหรับติดตั้งก่อน deploy
-- MySQL DB : ระบบจะสร้างตารางให้อัตโนมัติเมื่อรัน API
+## ค่ามาตรฐานเครื่อง lab (ให้ตรงกันทั้งโปรเจกต์)
 
-## ติดตั้ง (ครั้งแรกบนเครื่อง)
+รหัสผ่านผู้ใช้ฐานข้อมูล **`api_user`** ใน MariaDB และค่า **`DB_PASSWORD`** ในไฟล์ `.env` ใช้ค่าเดียวกัน:
+
+**`P@ssw0rd`**
+
+ถ้าเครื่องคุณใช้รหัสอื่น ให้แก้ทั้งใน MariaDB และใน `.env` ให้ตรงกัน — อย่า commit ไฟล์ `.env` ขึ้น git
+
+## เริ่มต้นครั้งแรก (ทำตามลำดับนี้)
+
+1. **โฟลเดอร์โปรเจกต์**  
+   ตัวอย่าง: `D:\Dowloard_D\kimp` (ถ้าโฟลเดอร์อยู่ที่อื่น ให้ `cd` ไปที่ที่มี `api.py`)
+
+2. **สร้าง venv แล้วติดตั้งแพ็กเกจ**
+
 ```powershell
+cd D:\Dowloard_D\kimp
 python -m venv env
 .\env\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### อัปโหลดไปเซิร์ฟเวอร์ (FileZilla ฯลฯ) — อย่าอัปโหลดโฟลเดอร์ `env`
+3. **สร้างไฟล์ `.env`**  
+   คัด `.env.example` ไปเป็นไฟล์ชื่อ `.env` ในโฟลเดอร์เดียวกับ `api.py`  
+   ค่าเริ่มต้นใน `.env.example` ใช้ `DB_PASSWORD=P@ssw0rd` และ API พอร์ต **3500** อยู่แล้ว — แก้เฉพาะ `DB_HOST` ถ้า IP เครื่อง MariaDB ไม่ใช่ `192.168.137.50`
 
-โฟลเดอร์ venv (`env`) เก็บ **path แบบเต็ม** ไปที่ Python เครื่องที่สร้าง — ถ้าคัด `env` จากเครื่องหนึ่งไปอีกเครื่อง จะ error แบบ `did not find executable at ... PythonSoftwareFoundation...`
+4. **ฐานข้อมูล MariaDB / MySQL**  
+   - สร้างฐานชื่อ **`bidkom`**  
+   - สร้างผู้ใช้ **`api_user`** รหัส **`P@ssw0rd`** และให้สิทธิ์บน `bidkom.*`  
+   - ทำใน phpMyAdmin ก็ได้ หรือรัน SQL (ถ้า user มีอยู่แล้วอาจได้ error ซ้ำ — ให้ข้ามหรือใช้ `ALTER USER`)
 
-**บนเครื่องที่รันจริง:** อัปโหลดแค่โค้ด + `requirements.txt` (+ `.env` หรือสร้างใหม่บนเซิร์ฟเวอร์) แล้วสร้า venv ใหม่ที่นั่น:
-
-```powershell
-cd C:\mobileapp_api
-Remove-Item -Recurse -Force env   # ถ้ามี env เก่าที่คัดมาผิด ๆ — ลบทิ้ง
-python -m venv env
-.\env\Scripts\activate
-pip install -r requirements.txt
-uvicorn api:app --host 192.168.137.50 --port 3500 --reload
+```sql
+CREATE DATABASE IF NOT EXISTS bidkom CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'api_user'@'%' IDENTIFIED BY 'P@ssw0rd';
+GRANT ALL PRIVILEGES ON bidkom.* TO 'api_user'@'%';
+FLUSH PRIVILEGES;
 ```
 
-ต้องมี Python ติดตั้งบนเซิร์ฟเวอร์แล้ว (`python --version` ใช้ได้) — ถ้าใช้ Python จาก Microsoft Store บนเครื่อง dev แต่เซิร์ฟเวอร์ไม่มี ให้ติดตั้ง Python จาก [python.org](https://www.python.org/downloads/) บนเซิร์ฟเวอร์ก่อน
+   **ทางลัด:** import ไฟล์ **`dump-bidkom-*.sql`** (ถ้ามีในโปรเจกต์) จะได้ทั้งโครงตารางและข้อมูลตัวอย่าง — หลัง import ยังต้องให้ `api_user` + รหัส `P@ssw0rd` เชื่อมกับฐานนี้ได้ตามที่ตั้งใน `.env`
 
-## วิธีรันโค้ด (แนวเดียวกับโปรเจกต์ lab `mobileapp_api`: bookstore_api + uvicorn)
-
-ทุกครั้งที่จะรัน ให้เข้า **virtual environment** ก่อน แล้วค่อยสั่งคำสั่งด้านล่าง
-
-### 1) ตั้งค่า DB แบบครั้งเดียว (หลังรีบูตเครื่องไม่ต้องทำใหม่)
-
-คัด `.env.example` เป็นไฟล์ชื่อ **`.env`** ในโฟลเดอร์เดียวกับ `api.py` แล้วแก้รหัสผ่านให้ตรง MariaDB:
-
-```
-DB_HOST=192.168.137.50
-DB_PORT=3306
-DB_USER=api_user
-DB_PASSWORD=รหัสของคุณ
-DB_NAME=bidkom
-
-UVICORN_HOST=192.168.137.50
-UVICORN_PORT=3500
-```
-
-`UVICORN_*` ให้ตรงกับคำสั่ง `uvicorn` — แอป Flet จะใช้ `http://UVICORN_HOST:UVICORN_PORT` เรียก API อัตโนมัติ (ดู `app_config.py`)  
-`api.py` โหลด `.env` ผ่าน `app_config` + `python-dotenv`
-
-### 2) เปิด venv แล้วรัน API (แบบเดียวกับโปรเจกต์เก่า / lab)
-
-เข้าโฟลเดอร์ที่มี `api.py` กับ `requirements.txt` แล้ว activate แล้วรัน `uvicorn` ตรง ๆ — **ไม่ต้องตั้ง `$env:` ทุกครั้ง** ถ้ามีไฟล์ `.env` แล้ว (ข้อ 1)
+5. **รัน API** (เปิด venv ก่อนทุกครั้ง)
 
 ```powershell
 cd D:\Dowloard_D\kimp
@@ -68,134 +54,138 @@ cd D:\Dowloard_D\kimp
 uvicorn api:app --host 192.168.137.50 --port 3500 --reload
 ```
 
-(ถ้าโปรเจกต์อยู่ `C:\mobileapp_api` ให้ `cd` ไปที่นั้น) — **host/port ต้องตรงกับ `UVICORN_*` ใน `.env`**  
-ตรวจ API: `http://192.168.137.50:3500/docs` หรือ `/health`
+   - **`--host` / `--port` ต้องตรงกับ `UVICORN_HOST` / `UVICORN_PORT` ใน `.env`** ไม่งั้นแอป Flet จะเรียก API ผิดที่  
+   - ทดสอบ: เปิด `http://192.168.137.50:3500/docs` หรือ `/health`  
+   - ทางลัด: `.\run_api.ps1` หรือดับเบิลคลิก `run_api.bat` (ตั้ง host/port ใน `.ps1` ได้ — ค่าเริ่มต้น **พอร์ต 3500** ให้ตรง `.env`)
 
-**ทางเลือก:** ดับเบิลคลิก `run_api.bat` หรือ `.\run_api.ps1` — สคริปต์จะ activate แล้วรัน uvicorn ให้ (แก้ Host/Port ในไฟล์สคริปต์ได้)
+6. **รันแอป Flet** (เทอร์มินัลใหม่ ยัง activate venv)
 
-### 3) ทางเลือก: ตั้งค่า DB แบบชั่วคราวด้วย env (ไม่ใช้ .env)
+```powershell
+cd D:\Dowloard_D\kimp
+.\env\Scripts\activate
+python flet_app.py
+```
+
+   หรือแบบเว็บ (พอร์ต Flet เว็บเริ่มต้นมัก **3500** — **คนละตัวกับ API** ถ้า API ก็ใช้ 3500 อยู่แล้ว ให้ตั้งพอร์ต Flet เป็นอย่างอื่น เช่น 3550):
+
+```powershell
+$env:FLET_WEB_PORT = "3550"
+python run_flet_web.py
+```
+
+## พอร์ต API: 3500 กับ 8000 (อย่าสลับโดยไม่แก้ `.env`)
+
+| วิธีรัน | พอร์ต API ที่ใช้ | ต้องตั้งใน `.env` |
+|--------|------------------|-------------------|
+| คำสั่งในข้อ 5 ด้านบน / `run_api.ps1` / `run_api.bat` (ค่าเริ่มต้นโปรเจกต์) | **3500** | `UVICORN_PORT=3500` |
+| `run_all.py`, `run_all_web.py` | **8000** | `UVICORN_PORT=8000` |
+
+`app_config.py` ประกอบ URL ที่ Flet ใช้เรียก API จาก `UVICORN_*` (หรือ `API_BASE_URL`) — **พอร์ตใน `.env` ต้องตรงกับพอร์ตที่ uvicorn ฟังจริง**
+
+## ไฟล์สำคัญ
+
+- `api.py` — FastAPI สำหรับ CRUD และคำนวณตารางผ่อน/วันจบหนี้; สร้างตารางให้อัตโนมัติเมื่อรัน API (ถ้าเชื่อม DB ได้)
+- `flet_app.py` — entrypoint แอป Flet
+- `ui/` — หน้าจอแยกไฟล์ (login / signup / dashboard / result ฯลฯ)
+- `requirements.txt` — dependency
+- `.env.example` — แม่แบบ `.env` (รหัส lab `P@ssw0rd`)
+
+### อัปโหลดไปเซิร์ฟเวอร์ (FileZilla ฯลฯ) — อย่าอัปโหลดโฟลเดอร์ `env`
+
+โฟลเดอร์ venv (`env`) เก็บ path แบบเต็มไปที่ Python เครื่องที่สร้าง — คัดไปเครื่องอื่นจะ error แบบ `did not find executable at ...`
+
+**บนเครื่องที่รันจริง:** อัปโหลดโค้ด + `requirements.txt` (+ สร้าง `.env` บนเซิร์ฟเวอร์) แล้วสร้าง venv ใหม่:
+
+```powershell
+cd D:\Dowloard_D\kimp
+Remove-Item -Recurse -Force env -ErrorAction SilentlyContinue
+python -m venv env
+.\env\Scripts\activate
+pip install -r requirements.txt
+uvicorn api:app --host 192.168.137.50 --port 3500 --reload
+```
+
+ต้องมี Python บนเซิร์ฟเวอร์ (`python --version`) — แนะนำติดตั้งจาก [python.org](https://www.python.org/downloads/) ถ้าไม่ใช้ Microsoft Store
+
+## ทางเลือก: ตั้งค่า DB ชั่วคราวด้วยตัวแปรสภาพแวดล้อม (ไม่ใช้ `.env`)
 
 ```powershell
 $env:DB_HOST = "192.168.137.50"
 $env:DB_USER = "api_user"
-$env:DB_PASSWORD = "รหัสของคุณ"
+$env:DB_PASSWORD = "P@ssw0rd"
 $env:DB_NAME = "bidkom"
-uvicorn api:app --host 0.0.0.0 --port 8000
+uvicorn api:app --host 0.0.0.0 --port 3500 --reload
 ```
 
-### 4) รันแอป Flet (เปิดหน้าต่างอื่น โดยยังเปิด venv อยู่)
+ถ้าใช้วิธีนี้ แอป Flet ยังต้องรู้พอร์ต API — ตั้ง `UVICORN_PORT` / `API_BASE_URL` ให้ตรง หรือพึ่งค่า default ใน `app_config.py`
 
-ถ้าใน `.env` มี `UVICORN_HOST` / `UVICORN_PORT` ตรงกับ uvicorn แล้ว แอปจะเรียก API ที่ **`http://<host>:<port>`** นั้นโดยอัตโนมัติ — หรือใส่ **`API_BASE_URL`** เต็ม ๆ แทนได้ (จะ override `UVICORN_*`)  
-ถ้าไม่มีทั้งคู่ โปรเจกต์นี้มีค่า fallback ใน `app_config.py` (เช่น `192.168.137.50:3500`) — ดูไฟล์นั้นและ `.env.example`
+## เปิดบนมือถือ (WiFi / LAN เดียวกับคอม)
 
-```powershell
-python flet_app.py
-```
-หรือรันเว็บ Flet (พอร์ต **เว็บ** Flet เริ่มต้น 3500 ใน `run_flet_web.py` — **คนละพอร์ตกับ FastAPI**; ถ้า uvicorn ใช้พอร์ต 3500 อยู่แล้ว ให้ตั้ง `$env:FLET_WEB_PORT='3550'` ก่อนรัน Flet เว็บ):
-```powershell
-python run_flet_web.py
-```
+**หลักการ:** หน้าเว็บ Flet รันที่ PC; มือถือเปิดเบราว์เซอร์เข้า `http://<IPv4-ของคอม>:<พอร์ต-Flet>`  
+การเรียก FastAPI ทำที่ Python บน PC (`httpx` ใน `ui/api_client`) — ใน `.env` ให้ `UVICORN_*` ชี้ไปที่ API บนเครื่องเดียวกับที่รัน `run_flet_web.py` (บนเครื่องเดียวกันมักใช้ `http://127.0.0.1:<พอร์ต-api>` ได้)
 
-### 5) เปิดบนมือถือ (WiFi / วง LAN เดียวกับคอม)
+**ขั้นตอนสั้น ๆ**
 
-**แนวที่โจทมักต้องการ:** มือถือเปิด **เบราว์เซอร์** (Chrome/Safari) แล้วเข้าแอปแบบเว็บ — **ไม่ต้องติดตั้งแอปจาก Store** ถ้าอาจารย์ไม่ระบุ
+1. คอมกับมือถืออยู่วง WiFi เดียวกัน  
+2. รัน API: `uvicorn api:app --host 0.0.0.0 --port 3500 --reload`  
+3. รัน Flet เว็บด้วยพอร์ตคนละตัว เช่น `FLET_WEB_PORT=3550` แล้ว `python run_flet_web.py`  
+4. ดู IP คอม: `ipconfig` → IPv4 ของ WiFi  
+5. บนมือถือเปิด `http://<IP-คอม>:3550` — **ห้ามใช้ `127.0.0.1` บนมือถือ**  
+6. ถ้าเข้าไม่ได้ — ตรวจ Windows Firewall (Inbound TCP พอร์ตที่ใช้)
 
-**หลักการสั้น ๆ**
+### ค้างที่หน้า “Working...”
 
-- หน้าเว็บ Flet รันที่ **PC** — มือถือแค่โหลด UI ผ่านเครือข่าย
-- การเรียก **FastAPI** ทำที่ **Python บน PC** (`httpx` ใน `ui/api_client`) ไม่ใช่ให้มือถือยิง API ตรง ๆ ดังนั้นใน `.env` ให้ `API_BASE_URL` / `UVICORN_*` ชี้ไปที่ API บนเครื่องเดียวกับที่รัน `run_flet_web.py` (ปกติใช้ `http://127.0.0.1:<พอร์ต-api>` ก็ได้ ถ้า API รันบนเครื่องเดียวกัน)
-
-**ขั้นตอนแนะนำ**
-
-1. **คอมกับมือถือต่อ WiFi วงเดียวกัน** (หรือมือถือต่อ hotspot จากคอม — แล้วใช้ IP ฝั่งคอมในวงนั้น)
-2. **รัน FastAPI ให้ฟังทุก interface** (ให้มือถือ “เข้าถึงเครื่องคอม” ได้เมื่อต้องตรวจจากมือถือ — ส่วนใหญ่โฟกัสที่หน้าเว็บ Flet; ถ้า API อยู่คอมเดียวกับ Flet ใช้ `--host 0.0.0.0` สะดวกที่สุด):
-   ```powershell
-   uvicorn api:app --host 0.0.0.0 --port 3500 --reload
-   ```
-3. **รัน Flet แบบเว็บ** โดย bind `0.0.0.0` (เป็นค่าเริ่มต้นใน `run_flet_web.py`) และใช้ **พอร์ตคนละตัวกับ API** — ถ้า API ใช้ 3500 แล้ว ให้ใช้พอร์ตอื่น เช่น 3550:
-   ```powershell
-   $env:FLET_WEB_PORT = "3550"
-   python run_flet_web.py
-   ```
-4. ดู **IP ของคอมในวงเดียวกัน** (PowerShell): `ipconfig` → หา `IPv4 Address` ของอแดปเตอร์ WiFi (เช่น `192.168.137.50`)
-5. **บนมือถือ** เปิดเบราว์เซอร์ไปที่ **`http://<IPv4-ของคอม>:3550`**  
-   - **ห้ามใช้** `http://127.0.0.1:...` บนมือถือ — `127.0.0.1` หมายถึงตัวมือถือเอง ไม่ใช่คอม
-6. ถ้าเปิดไม่ได้ — เปิด **Windows Defender Firewall** ให้อนุญาต **Inbound** TCP สำหรับพอร์ตที่ใช้ (พอร์ต Flet เว็บ + พอร์ต API ถ้าต้องเข้าถึง `/docs` จากมือถือ) หรือสร้างกฎอนุญาต `python.exe`
-
-### ค้างที่หน้า “Working...” (จุดฟ้า + ตัวหนังสือ)
-
-ข้อความนี้มาจาก **Flet Web** เอง ยังไม่ใช่หน้า login ของโปรเจกต์ — หมายถึงเบราว์เซอร์กำลังโหลด engine / เชื่อม **WebSocket** ไปที่เครื่อง `python run_flet_web.py`
+มาจาก Flet Web ขณะโหลด / WebSocket — ดูตารางด้านล่าง
 
 | สาเหตุที่พบบ่อย | ทำอย่างไร |
 |------------------|-----------|
-| โหลดครั้งแรกช้า (โดยเฉพาะมือถือ) | รอ 1–3 นาทีครั้งแรก; ค่าเริ่มต้นใช้ **`FLET_WEB_RENDERER=canvaskit`** เพื่อให้ GIF พื้นหลังขยับ — ถ้าอยากโหลดเบาลง: ตั้ง **`auto`** (พื้นหลังอาจนิ่งบนมือถือ) |
-| ไฟร์วอลล์ / เราเตอร์ตัด client-to-client | เปิดอนุญาตพอร์ต Flet (เช่น 3550); ปิด **AP isolation / Client isolation** บน WiFi ถ้ามี |
-| ใช้ `127.0.0.1` บนมือถือ | ต้องใช้ `http://<IP-คอม>:พอร์ต` เท่านั้น |
-| ยังค้างนาน | ลอง `FLET_DISABLE_BG_GIF_WEB=1` แล้วรันใหม่; หรือเปิดบน **Chrome บนคอม** ที่ `http://127.0.0.1:3550` ถ้าคอมได้แต่มือถือไม่ได้ = ปัญหาเครือข่ายไม่ใช่โค้ดแอป |
+| โหลดครั้งแรกช้า (มือถือ) | รอ 1–3 นาที; ค่าเริ่มต้น `FLET_WEB_RENDERER=canvaskit` ใน `run_flet_web.py` — ถ้าอยากเบาลงลอง `auto` |
+| Firewall / AP isolation | อนุญาตพอร์ต Flet; ปิด client isolation บนเราเตอร์ถ้ามี |
+| ใช้ `127.0.0.1` บนมือถือ | ใช้ `http://<IP-คอม>:พอร์ต` เท่านั้น |
+| ค้างนาน | ลอง `FLET_DISABLE_BG_GIF_WEB=1`; ทดสอบบน Chrome ที่คอม `http://127.0.0.1:<พอร์ต-Flet>` |
 
-### GIF พื้นหลังบนมือถือเป็นภาพนิ่ง (บนคอมขยับได้)
+### GIF พื้นหลังบนมือถือนิ่ง
 
-**สาเหตุหลัก:** โหมด **`FLET_WEB_RENDERER=auto`** บนมือถือมักใช้ renderer ที่อัปเดตรูปพื้นหลังไม่สม่ำเสมอ — **`run_flet_web.py` ตั้งค่าเริ่มต้นเป็น `canvaskit` แล้ว** (โหลดครั้งแรกหนักกว่าแต่ GIF มักขยับได้)
+`FLET_WEB_RENDERER=auto` บนมือถือมักทำให้ GIF ไม่ขยับ — `run_flet_web.py` ตั้ง `canvaskit` เป็นค่าเริ่มต้น  
+มีทางสำรองด้วย Pillow (อยู่ใน `requirements.txt`)
 
-โปรเจกต์ยังใช้ **Pillow สลับเฟรม** บนเว็บ (ต้อง `pip install Pillow`) เป็นเส้นทางสำรองเมื่อ GIF แบบ native ไม่เล่น
-
-- อยากให้เว็บใช้ `ft.Image` แบบเดิม (พฤติกรรมเหมือนก่อน): `FLET_BG_GIF_WEB_NATIVE=1`
-- ปิดการสลับเฟรม: `FLET_DISABLE_MANUAL_GIF_ANIM=1`
-
-**ถ้าโจทต้องการ “แอปแท้บนมือถือ” (ไอคอนติดเครื่อง / Store)**  
-โปรเจกต์นี้เป็นแพ็กเกจ Python + Flet — ทางที่ทำได้ในโลกจริงคือ **build เป็น native** (Flet mobile build / Android APK / iOS ผ่าน toolchain ของ Flet) หรือ **PWA**  
-สำหรับงาน lab ส่วนใหญ่ **การเข้าเว็บผ่าน WiFi ตามข้อ 5** ถือว่าครบโจท “รันบนมือถือ + วงเน็ตเดียวกัน” แล้ว — ถ้าอาจารย์กำหนดรูปแบบ build ชัดเจน ค่อยทำขั้นตอน packaging เพิ่ม
+**ถ้าโจทต้องการแอปติดเครื่อง / Store** — โปรเจกต์นี้เป็น Python + Flet; ส่วนใหญ่งาน lab ใช้การเปิดผ่านเบราว์เซอร์ตามด้านบนก็เพียงพอ
 
 ---
 
-## ตั้งค่า Database (MySQL)
-ค่าเริ่มต้นใน `api.py` (แก้ได้ด้วย env):
-- `DB_HOST=192.168.137.50`
-- `DB_PORT=3306`
-- `DB_USER=api_user` — **ไม่ใช้ `root` เป็นค่าเริ่มต้น** เพราะ MariaDB หลายเครื่องใช้ `auth_gssapi` กับ root แล้ว PyMySQL จะ error **2059**
-- `DB_PASSWORD=P@ssw0rd` — ต้องตรงกับที่สร้าง `api_user` ใน MariaDB
-- `DB_NAME=bidkom`
+## ตั้งค่า Database (สรุป env)
 
-ถ้าต้องการเปลี่ยนค่าในเครื่องเซิร์ฟเวอร์ สามารถตั้ง ENV ก่อนรันได้ — **PowerShell** ใช้ `$env:DB_HOST=...` (ดูตัวอย่างในข้อ 2 ด้านบน); ถ้าใช้ **cmd** ใช้ `set DB_HOST=...`
+ค่าที่ `api.py` อ่าน (แก้ใน `.env` หรือตัวแปรระบบ):
 
-## สคริปต์ช่วยรัน (ทางลัด)
+- `DB_HOST` — เช่น `192.168.137.50`
+- `DB_PORT` — `3306`
+- `DB_USER` — **`api_user`** (ไม่แนะนำใช้ `root` เป็นค่าเริ่มต้น ถ้า root ใช้ `auth_gssapi` จะเจอ PyMySQL error **2059**)
+- `DB_PASSWORD` — **`P@ssw0rd`** (มาตรฐาน lab ใน `.env.example`)
+- `DB_NAME` — `bidkom`
+
+## สคริปต์ช่วยรัน
 
 | ไฟล์ | ทำอะไร |
 |------|--------|
-| `run_all.py` | ถ้ายังไม่มี API ที่พอร์ต 8000 จะสตาร์ท `uvicorn` ให้ แล้วเปิด `flet_app.py` (แอปหน้าต่าง) |
-| `run_all_web.py` | แบบเดียวกันแต่เปิดเว็บผ่าน `run_flet_web.py` |
-| `run_flet_web.py` | รันเฉพาะ Flet แบบเว็บ (พอร์ตเริ่มต้น 3500) — ต้องมี API รันอยู่แล้ว |
+| `run_all.py` | ถ้า API ที่ `127.0.0.1:8000` ยังไม่ขึ้น จะสตาร์ท uvicorn พอร์ต **8000** แล้วเปิด `flet_app.py` — ตั้ง `UVICORN_PORT=8000` ใน `.env` ก่อน |
+| `run_all_web.py` | เหมือนกันแต่เปิดเว็บผ่าน `run_flet_web.py` — เช่นกัน API **8000** |
+| `run_flet_web.py` | รันเฉพาะ Flet เว็บ — ต้องมี API รันอยู่แล้ว และ `.env` ชี้พอร์ต API ถูกต้อง |
+| `run_api.ps1` / `run_api.bat` | activate venv แล้ว uvicorn — พอร์ตเริ่มต้น **3500** ให้คู่กับ `.env.example` |
 
 ## อัปโหลดขึ้นเซิร์ฟเวอร์ด้วย FileZilla
 
-แยกตามว่าแก้ **ฝั่ง API อย่างเดียว** หรือแก้ **ทั้งแอป**
+### แก้เฉพาะ backend
 
-### กรณีแก้เฉพาะ backend (แนะนำแบบงานเก่า — อัปโหลดน้อยที่สุด)
+1. อัปโหลด `api.py`, `app_config.py` (ถ้าแก้), `requirements.txt` (ถ้าแก้ dependency)  
+2. บนเซิร์ฟเวอร์: `pip install -r requirements.txt` ใน venv  
+3. รีสตาร์ท: `uvicorn api:app --host 0.0.0.0 --port 3500` (หรือพอร์ตที่ deploy ใช้)
 
-ถ้าแก้แค่ logic / endpoint ใน FastAPI ชัดเจนว่า **ไม่ได้เพิ่มไลบรารีใหม่** ใน `requirements.txt`:
+### แก้หน้าจอ Flet / `ui/`
 
-1. อัปโหลดทับบนเซิร์ฟเวอร์เฉพาะ:
-   - `api.py`
-   - `app_config.py` (ถ้าโค้ดรุ่นใหม่มี — ใช้ร่วมกับ Flet เรื่อง URL API)
-2. ถ้ามีการแก้ `requirements.txt` (เพิ่ม/เปลี่ยนแพ็กเกจ) ให้อัปโหลดเพิ่ม:
-   - `requirements.txt`
-3. SSH/RDP ไปที่เซิร์ฟเวอร์ แล้วใน venv รัน:
-   ```powershell
-   pip install -r requirements.txt
-   ```
-4. รีสตาร์ท API:
-   ```powershell
-   uvicorn api:app --host 0.0.0.0 --port 8000
-   ```
-
-สรุป: **ขั้นต่ำที่มักใช้จริงคือ `api.py` + `requirements.txt` (เฉพาะเมื่อไฟล์ req เปลี่ยน)**
-
-### กรณีแก้หน้าจอแอป Flet / โฟลเดอร์ `ui/`
-
-ต้องอัปโหลดไฟล์ที่แก้ด้วย เช่น `flet_app.py`, `ui\**`, `img\**`, `run_flet_web.py` ตามที่เปลี่ยนจริง — ไม่ได้จำกัดแค่สองไฟล์เหมือนข้างบน
+อัปโหลดไฟล์ที่แก้ เช่น `flet_app.py`, `ui\**`, `img\**`, `run_flet_web.py`
 
 ### หมายเหตุ
 
-- โฟลเดอร์ `env/` ไม่ต้องอัปโหลด — สร้าง venv บนเซิร์ฟเวอร์เองแล้ว `pip install -r requirements.txt`
-- ไฟล์ **`.env` มักไม่ได้อยู่ใน zip / ไม่ได้อัปโหลด** (หรือลืม) — ถ้าไม่มี ให้ **สร้างบนเซิร์ฟเวอร์** โดยคัดจาก `.env.example` หรืออัปโหลด `.env` แยกใน FileZilla อย่างตั้งใจ ไม่เช่นนั้นแอปอาจใช้ค่า fallback จาก `app_config.py` เท่านั้น
-- ชื่อไฟล์ API ของโปรเจกต์นี้คือ **`api.py`** (เทียบเท่า `bookstore_api.py` ในงาน lab)
+- ไม่อัปโหลด `env/` — สร้าง venv บนเซิร์ฟเวอร์  
+- `.env` มักไม่ใส่ใน zip — สร้างบนเซิร์ฟเวอร์จาก `.env.example` แล้วใส่ `DB_PASSWORD` ให้ตรงเครื่องนั้น  
+- ไฟล์ API หลักคือ **`api.py`**
